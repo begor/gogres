@@ -4,21 +4,21 @@ import "github.com/jackc/pgx"
 
 type Column struct {
 	Name, Type string
-	Nullable bool
+	Nullable   bool
 }
 
 func Connect() (*pgx.Conn, error) {
 	connConfig := pgx.ConnConfig{
-		User: "begor",
+		User:     "begor",
 		Database: "begor",
 	}
 
 	conn, err := pgx.Connect(connConfig)
-	
+
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return conn, nil
 }
 
@@ -36,9 +36,8 @@ func GetTableColumns(tableName string, conn *pgx.Conn) ([]Column, error) {
 	for rows.Next() {
 		var name, data_type string
 		var nullable bool
-		
-		err = rows.Scan(&name, &data_type, &nullable)
 
+		err = rows.Scan(&name, &data_type, &nullable)
 
 		columns = append(columns, Column{name, data_type, nullable})
 	}
@@ -48,11 +47,10 @@ func GetTableColumns(tableName string, conn *pgx.Conn) ([]Column, error) {
 }
 
 func GetTableNames(schema string, conn *pgx.Conn) ([]string, error) {
-	var tableNames []string;
+	var tableNames []string
 	rows, err := conn.Query(`SELECT table_name AS name 
 							 FROM information_schema.tables 
 							 WHERE table_schema = $1;`, schema)
-
 
 	if err != nil {
 		return tableNames, err
@@ -60,13 +58,13 @@ func GetTableNames(schema string, conn *pgx.Conn) ([]string, error) {
 
 	for rows.Next() {
 		var name string
-		
+
 		err = rows.Scan(&name)
-		
+
 		if err != nil {
 			return tableNames, err
 		}
-		
+
 		tableNames = append(tableNames, name)
 	}
 

@@ -13,9 +13,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Unable to establish connection: %v\n", err)
 		os.Exit(1)
 	}
-	
+
 	defer conn.Close()
-	
+
 	tableNames, err := db.GetTableNames("public", conn)
 
 	if err != nil {
@@ -29,9 +29,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Unable to fetch %v infos: %v\n", tableNames[0], err)
 		os.Exit(1)
 	}
-	
+
 	fmt.Fprintf(os.Stdout, "Tables: %v\n", tableNames)
 	fmt.Fprintf(os.Stdout, "Tables info: %v\n", tableInfo)
 }
-
-
