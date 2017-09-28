@@ -25,9 +25,11 @@ func Connect() (*pgx.Conn, error) {
 func GetTableColumns(tableName string, conn *pgx.Conn) ([]Column, error) {
 	var columns []Column
 
-	rows, err := conn.Query(`SELECT column_name, data_type, is_nullable
-							 FROM information_schema.columns 
-		                     WHERE table_name = $1;`, tableName)
+	rows, err := conn.Query(`
+		SELECT column_name, data_type, is_nullable
+		FROM information_schema.columns 
+		WHERE table_name = $1;
+	`, tableName)
 
 	if err != nil {
 		return columns, nil
@@ -48,9 +50,12 @@ func GetTableColumns(tableName string, conn *pgx.Conn) ([]Column, error) {
 
 func GetTableNames(schema string, conn *pgx.Conn) ([]string, error) {
 	var tableNames []string
-	rows, err := conn.Query(`SELECT table_name AS name 
-							 FROM information_schema.tables 
-							 WHERE table_schema = $1;`, schema)
+
+	rows, err := conn.Query(`
+		SELECT table_name AS name 
+		FROM information_schema.tables 
+		WHERE table_schema = $1;
+	`, schema)
 
 	if err != nil {
 		return tableNames, err
