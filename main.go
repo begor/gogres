@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"pgxapi/db"
+	"github.com/begor/pgxapi/db"
 )
 
 func main() {

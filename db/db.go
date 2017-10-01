@@ -22,6 +22,7 @@ func Connect() (*pgx.Conn, error) {
 	return conn, nil
 }
 
+// TODO: rewrite to one query with GetTableNames
 func GetTableColumns(tableName string, conn *pgx.Conn) ([]Column, error) {
 	var columns []Column
 
@@ -36,12 +37,12 @@ func GetTableColumns(tableName string, conn *pgx.Conn) ([]Column, error) {
 	}
 
 	for rows.Next() {
-		var name, data_type string
+		var name, dataType string
 		var nullable bool
 
-		err = rows.Scan(&name, &data_type, &nullable)
+		err = rows.Scan(&name, &dataType, &nullable)
 
-		columns = append(columns, Column{name, data_type, nullable})
+		columns = append(columns, Column{name, dataType, nullable})
 	}
 
 	return columns, nil
