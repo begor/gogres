@@ -5,19 +5,19 @@ import (
 	"os"
 
 	"github.com/begor/pgxapi/db"
+	"github.com/begor/pgxapi/web"
 )
 
 func main() {
-	conn, err := db.Connect()
+	pool, err := db.Connect()
+	defer pool.Close()
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to establish connection: %v\n", err)
 		os.Exit(1)
 	}
 
-	defer conn.Close()
-
-	relations, err := db.GetRelations("public", conn)
+	relations, err := db.GetRelations("public", pool)
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to fetch relations: %v\n", err)
@@ -25,4 +25,11 @@ func main() {
 	}
 
 	fmt.Fprintf(os.Stdout, "Relations: %v\n", relations)
+
+	err = web.StartWeb(relations, ":5050")
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to start web: %v\n", err)
+		os.Exit(1)
+	}
 }
