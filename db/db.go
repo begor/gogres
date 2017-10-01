@@ -14,35 +14,38 @@ type Relation struct {
 }
 
 // Connect - opens connection to PostgreSQL instance
-func Connect() (*pgx.Conn, error) {
+func Connect() (*pgx.ConnPool, error) {
 	connConfig := pgx.ConnConfig{
-		User:     "begor", // TODO: configs
+		User:     "begor",
 		Database: "begor",
 	}
 
-	// TODO: pool
-	conn, err := pgx.Connect(connConfig)
+	poolConfig := pgx.ConnPoolConfig{
+		ConnConfig: connConfig,
+	}
+
+	pool, err := pgx.NewConnPool(poolConfig)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return conn, nil
+	return pool, nil
 }
 
 // GetRelations returns existing relations for schema
-func GetRelations(schema string, conn *pgx.Conn) ([]Relation, error) {
+func GetRelations(schema string, pool *pgx.ConnPool) ([]Relation, error) {
 	var relations []Relation
 
 	// TODO: rewrite to one query
-	tableNames, err := getTableNames(schema, conn)
+	tableNames, err := getTableNames(schema, pool)
 
 	if err != nil {
 		return nil, err
 	}
 
 	for _, name := range tableNames {
-		cols, err := getTableColumns(name, conn)
+		cols, err := getTableColumns(name, pool)
 
 		if err != nil {
 			return nil, err
@@ -54,10 +57,10 @@ func GetRelations(schema string, conn *pgx.Conn) ([]Relation, error) {
 	return relations, nil
 }
 
-func getTableColumns(tableName string, conn *pgx.Conn) ([]column, error) {
+func getTableColumns(tableName string, pool *pgx.ConnPool) ([]column, error) {
 	var columns []column
 
-	rows, err := conn.Query(`
+	rows, err := pool.Query(`
 		SELECT column_name, data_type, is_nullable
 		FROM information_schema.columns 
 		WHERE table_name = $1;
@@ -80,10 +83,10 @@ func getTableColumns(tableName string, conn *pgx.Conn) ([]column, error) {
 
 }
 
-func getTableNames(schema string, conn *pgx.Conn) ([]string, error) {
+func getTableNames(schema string, pool *pgx.ConnPool) ([]string, error) {
 	var tableNames []string
 
-	rows, err := conn.Query(`
+	rows, err := pool.Query(`
 		SELECT table_name AS name 
 		FROM information_schema.tables 
 		WHERE table_schema = $1;
