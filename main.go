@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+
 	"github.com/begor/pgxapi/db"
 )
 
@@ -16,20 +17,12 @@ func main() {
 
 	defer conn.Close()
 
-	tableNames, err := db.GetTableNames("public", conn)
+	relations, err := db.GetRelations("public", conn)
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to fetch table names: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Unable to fetch relations: %v\n", err)
 		os.Exit(1)
 	}
 
-	tableInfo, err := db.GetTableColumns(tableNames[0], conn)
-
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to fetch %v infos: %v\n", tableNames[0], err)
-		os.Exit(1)
-	}
-
-	fmt.Fprintf(os.Stdout, "Tables: %v\n", tableNames)
-	fmt.Fprintf(os.Stdout, "Tables info: %v\n", tableInfo)
+	fmt.Fprintf(os.Stdout, "Relations: %v\n", relations)
 }

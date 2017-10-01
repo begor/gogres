@@ -2,17 +2,25 @@ package db
 
 import "github.com/jackc/pgx"
 
-type Column struct {
+type column struct {
 	Name, Type string
 	Nullable   bool
 }
 
+// Relation - represents PostgreSQL relation
+type Relation struct {
+	Name       string
+	Attributes []column
+}
+
+// Connect - opens connection to PostgreSQL instance
 func Connect() (*pgx.Conn, error) {
 	connConfig := pgx.ConnConfig{
-		User:     "begor",
+		User:     "begor", // TODO: configs
 		Database: "begor",
 	}
 
+	// TODO: pool
 	conn, err := pgx.Connect(connConfig)
 
 	if err != nil {
@@ -22,9 +30,32 @@ func Connect() (*pgx.Conn, error) {
 	return conn, nil
 }
 
-// TODO: rewrite to one query with GetTableNames
-func GetTableColumns(tableName string, conn *pgx.Conn) ([]Column, error) {
-	var columns []Column
+// GetRelations returns existing relations for schema
+func GetRelations(schema string, conn *pgx.Conn) ([]Relation, error) {
+	var relations []Relation
+
+	// TODO: rewrite to one query
+	tableNames, err := getTableNames(schema, conn)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, name := range tableNames {
+		cols, err := getTableColumns(name, conn)
+
+		if err != nil {
+			return nil, err
+		}
+
+		relations = append(relations, Relation{name, cols})
+	}
+
+	return relations, nil
+}
+
+func getTableColumns(tableName string, conn *pgx.Conn) ([]column, error) {
+	var columns []column
 
 	rows, err := conn.Query(`
 		SELECT column_name, data_type, is_nullable
@@ -42,14 +73,14 @@ func GetTableColumns(tableName string, conn *pgx.Conn) ([]Column, error) {
 
 		err = rows.Scan(&name, &dataType, &nullable)
 
-		columns = append(columns, Column{name, dataType, nullable})
+		columns = append(columns, column{name, dataType, nullable})
 	}
 
 	return columns, nil
 
 }
 
-func GetTableNames(schema string, conn *pgx.Conn) ([]string, error) {
+func getTableNames(schema string, conn *pgx.Conn) ([]string, error) {
 	var tableNames []string
 
 	rows, err := conn.Query(`
