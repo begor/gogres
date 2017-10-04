@@ -1,16 +1,26 @@
 package db
 
-import "github.com/jackc/pgx"
+import (
+	"fmt"
+
+	"github.com/jackc/pgx"
+)
+
+type tuple []interface{}
 
 type column struct {
 	Name, Type string
 	Nullable   bool
 }
 
+// Keyvalue - represents {column: value} mapping
+type Keyvalue map[string]interface{}
+
 // Relation - represents PostgreSQL relation
 type Relation struct {
 	Name       string
 	Attributes []column
+	Pool       *pgx.ConnPool
 }
 
 // Connect - opens connection to PostgreSQL instance
@@ -51,10 +61,48 @@ func GetRelations(schema string, pool *pgx.ConnPool) ([]Relation, error) {
 			return nil, err
 		}
 
-		relations = append(relations, Relation{name, cols})
+		relations = append(relations, Relation{name, cols, pool})
 	}
 
 	return relations, nil
+}
+
+// Select - selects given relation with limit and offset
+// TODO: refactor this mess
+func Select(relation Relation, limit int, offset int) []Keyvalue {
+	// TODO: this is kinda awful, revisit
+	// TODO: https://github.com/Masterminds/squirrel
+	template := "SELECT * FROM %v LIMIT %d OFFSET %d;"
+	query := fmt.Sprintf(template, relation.Name, limit, offset)
+
+	// TODO: this is also awful, maybe in Go there are ways to represent it better
+
+	var tuples []tuple
+
+	rows, _ := relation.Pool.Query(query)
+
+	for rows.Next() {
+		vals, _ := rows.Values()
+		tuples = append(tuples, vals)
+	}
+
+	fields := rows.FieldDescriptions()
+
+	var keyvals []Keyvalue
+
+	for _, tuple := range tuples {
+		kv := make(Keyvalue)
+
+		for i, fd := range fields {
+
+			kv[fd.Name] = tuple[i]
+		}
+
+		keyvals = append(keyvals, kv)
+	}
+
+	return keyvals
+
 }
 
 func getTableColumns(tableName string, pool *pgx.ConnPool) ([]column, error) {

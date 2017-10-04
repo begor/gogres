@@ -26,10 +26,5 @@ func main() {
 
 	fmt.Fprintf(os.Stdout, "Relations: %v\n", relations)
 
-	err = web.StartWeb(relations, ":5050")
-
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to start web: %v\n", err)
-		os.Exit(1)
-	}
+	web.StartWeb(relations, ":5050")
 }
