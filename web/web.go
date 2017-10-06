@@ -57,9 +57,9 @@ func printEndpoints(endpoints []Endpoint) {
 func makeRelationGetEndpoint(relation db.Relation) func(echo.Context) error {
 	handler := func(c echo.Context) error {
 		params := parseGetQueryParams(c)
-		xs := db.Select(relation, params.Limit, params.Offset)
+		tuples := db.Select(relation, params.Limit, params.Offset)
 
-		return c.JSON(http.StatusOK, xs)
+		return c.JSON(http.StatusOK, tuples)
 	}
 
 	return handler
