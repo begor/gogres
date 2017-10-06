@@ -94,7 +94,6 @@ func Select(relation Relation, limit int, offset int) []Keyvalue {
 		kv := make(Keyvalue)
 
 		for i, fd := range fields {
-
 			kv[fd.Name] = tuple[i]
 		}
 

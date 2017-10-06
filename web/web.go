@@ -8,25 +8,52 @@ import (
 	"github.com/labstack/echo"
 )
 
+type Endpoint struct {
+	Path   string
+	Method string
+}
+
 // StartWeb - starts HTTP server for given collection of relations
 func StartWeb(relations []db.Relation, port string) {
 	e := echo.New()
 
-	setupRoutes(relations, e)
+	endpoints := setupRoutes(relations, e)
 
-	e.Logger.Fatal(e.Start(port))
+	printEndpoints(endpoints)
+
+	e.Start(port)
 }
 
-func setupRoutes(relations []db.Relation, e *echo.Echo) {
+func setupRoutes(relations []db.Relation, e *echo.Echo) []Endpoint {
+	var endpoints []Endpoint
+
 	for _, relation := range relations {
-		path := fmt.Sprint("/", relation.Name)
+		path := fmt.Sprint("/", relation.Name, "/")
+		handler := makeRelationGetEndpoint(relation)
 
-		fmt.Print(path)
+		endpoint := Endpoint{path, "GET"}
+		endpoints = append(endpoints, endpoint)
 
-		e.GET(path, func(c echo.Context) error {
-			xs := db.Select(relation, 10, 0)
-
-			return c.JSON(http.StatusOK, xs)
-		})
+		e.GET(path, handler)
 	}
+
+	return endpoints
+}
+
+func printEndpoints(endpoints []Endpoint) {
+	fmt.Println("Generated endpoints:")
+
+	for _, endpoint := range endpoints {
+		fmt.Println(endpoint.Method, endpoint.Path)
+	}
+}
+
+func makeRelationGetEndpoint(relation db.Relation) func(echo.Context) error {
+	handler := func(c echo.Context) error {
+		xs := db.Select(relation, 10, 0)
+
+		return c.JSON(http.StatusOK, xs)
+	}
+
+	return handler
 }
