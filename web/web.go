@@ -3,6 +3,7 @@ package web
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/begor/pgxapi/db"
 	"github.com/labstack/echo"
@@ -11,6 +12,11 @@ import (
 type Endpoint struct {
 	Path   string
 	Method string
+}
+
+type SelectParams struct {
+	Limit  int
+	Offset int
 }
 
 // StartWeb - starts HTTP server for given collection of relations
@@ -50,10 +56,35 @@ func printEndpoints(endpoints []Endpoint) {
 
 func makeRelationGetEndpoint(relation db.Relation) func(echo.Context) error {
 	handler := func(c echo.Context) error {
-		xs := db.Select(relation, 10, 0)
+		params := parseGetQueryParams(c)
+		xs := db.Select(relation, params.Limit, params.Offset)
 
 		return c.JSON(http.StatusOK, xs)
 	}
 
 	return handler
+}
+
+func parseGetQueryParams(c echo.Context) SelectParams {
+	// Sane defaults
+	// TODO: move to config
+	limit := parseStrParamToInt(c, "limit", 10)
+	offset := parseStrParamToInt(c, "offset", 0)
+
+	return SelectParams{limit, offset}
+}
+
+func parseStrParamToInt(c echo.Context, param string, dflt int) int {
+	result := dflt
+	strParam := c.QueryParam(param)
+
+	if strParam != "" {
+		maybeResult, err := strconv.Atoi(strParam)
+
+		if err == nil {
+			result = maybeResult
+		}
+	}
+
+	return result
 }
