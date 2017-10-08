@@ -1,0 +1,9 @@
+{
+    "connection": {
+        "name": "begor", 
+        "schema": "public", 
+        "user": "begor", 
+        "host": "localhost"
+    },
+    "pool": 5
+}

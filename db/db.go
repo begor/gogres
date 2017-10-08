@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 
+	"github.com/begor/pgxapi/conf"
 	"github.com/jackc/pgx"
 )
 
@@ -25,14 +26,10 @@ type Relation struct {
 }
 
 // Connect - opens connection to PostgreSQL instance
-func Connect() (*pgx.ConnPool, error) {
-	connConfig := pgx.ConnConfig{
-		User:     "begor",
-		Database: "begor",
-	}
-
+func Connect(app conf.App) (*pgx.ConnPool, error) {
 	poolConfig := pgx.ConnPoolConfig{
-		ConnConfig: connConfig,
+		ConnConfig:     app.Connection,
+		MaxConnections: app.Pool,
 	}
 
 	pool, err := pgx.NewConnPool(poolConfig)
