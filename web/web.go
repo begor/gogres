@@ -58,8 +58,9 @@ func makeRelationGetEndpoint(relation db.Relation) func(echo.Context) error {
 	handler := func(c echo.Context) error {
 		params := parseGetQueryParams(c)
 		tuples := db.Select(relation, params.Limit, params.Offset)
+		response := addMeta(tuples, params.Limit, params.Offset)
 
-		return c.JSON(http.StatusOK, tuples)
+		return c.JSON(http.StatusOK, response)
 	}
 
 	return handler
@@ -79,12 +80,23 @@ func parseStrParamToInt(c echo.Context, param string, dflt int) int {
 	strParam := c.QueryParam(param)
 
 	if strParam != "" {
-		maybeResult, err := strconv.Atoi(strParam)
-
-		if err == nil {
+		if maybeResult, err := strconv.Atoi(strParam); err == nil {
 			result = maybeResult
 		}
 	}
 
 	return result
+}
+
+func addMeta(tuples []db.Keyvalue, limit int, offset int) db.Keyvalue {
+	response := make(db.Keyvalue)
+	meta := make(db.Keyvalue)
+
+	meta["limit"] = limit
+	meta["offset"] = offset
+
+	response["meta"] = meta
+	response["tuples"] = tuples
+
+	return response
 }

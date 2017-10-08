@@ -6,6 +6,7 @@ import (
 	"github.com/jackc/pgx"
 )
 
+// TODO: move all data-related stuff to separate NS
 type tuple []interface{}
 
 type column struct {
