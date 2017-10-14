@@ -20,7 +20,7 @@ type SelectParams struct {
 }
 
 // StartWeb - starts HTTP server for given collection of relations
-func StartWeb(relations []db.Relation, port string) {
+func StartWeb(relations map[string][]db.Relation, port string) {
 	e := echo.New()
 
 	endpoints := setupRoutes(relations, e)
@@ -30,17 +30,20 @@ func StartWeb(relations []db.Relation, port string) {
 	e.Start(port)
 }
 
-func setupRoutes(relations []db.Relation, e *echo.Echo) []Endpoint {
+func setupRoutes(relations map[string][]db.Relation, e *echo.Echo) []Endpoint {
 	var endpoints []Endpoint
 
-	for _, relation := range relations {
-		path := fmt.Sprint("/", relation.Name, "/")
-		handler := makeRelationGetEndpoint(relation)
+	for prefix, thisRelations := range relations {
+		for _, relation := range thisRelations {
+			path := fmt.Sprint("/", prefix, "/", relation.Name, "/")
+			getHandler := makeRelationGetEndpoint(relation)
 
-		endpoint := Endpoint{path, "GET"}
-		endpoints = append(endpoints, endpoint)
+			getEndpoint := Endpoint{path, "GET"}
 
-		e.GET(path, handler)
+			endpoints = append(endpoints, getEndpoint)
+
+			e.GET(path, getHandler)
+		}
 	}
 
 	return endpoints
@@ -75,8 +78,8 @@ func parseGetQueryParams(c echo.Context) SelectParams {
 	return SelectParams{limit, offset}
 }
 
-func parseStrParamToInt(c echo.Context, param string, dflt int) int {
-	result := dflt
+func parseStrParamToInt(c echo.Context, param string, deflt int) int {
+	result := deflt
 	strParam := c.QueryParam(param)
 
 	if strParam != "" {

@@ -1,9 +1,22 @@
 {
-    "connection": {
-        "name": "begor", 
-        "schema": "public", 
-        "user": "begor", 
-        "host": "localhost"
-    },
-    "pool": 5
+    "connections": {
+        "first" : {
+            "config": {
+                "database": "begor",
+                "user": "begor", 
+                "host": "localhost"
+            },
+            "schema": "public", 
+            "poolSize": 5
+        },
+        "second": {
+            "config": {
+                "database": "second", 
+                "user": "begor", 
+                "host": "localhost"
+            },
+            "schema": "public", 
+            "poolSize": 2
+        }
+    }
 }
