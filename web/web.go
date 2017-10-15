@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/begor/pgxapi/db"
+	"github.com/begor/gogres/db"
 	"github.com/labstack/echo"
 )
 
