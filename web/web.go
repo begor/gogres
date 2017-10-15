@@ -9,11 +9,13 @@ import (
 	"github.com/labstack/echo"
 )
 
+// Endpoint - Represents API Endpoint
 type Endpoint struct {
 	Path   string
 	Method string
 }
 
+// SelectParams - limit and offset, parsed from QueryParams
 type SelectParams struct {
 	Limit  int
 	Offset int
@@ -33,16 +35,12 @@ func StartWeb(relations map[string][]db.Relation, port string) {
 func setupRoutes(relations map[string][]db.Relation, e *echo.Echo) []Endpoint {
 	var endpoints []Endpoint
 
-	for prefix, thisRelations := range relations {
-		for _, relation := range thisRelations {
-			path := fmt.Sprint("/", prefix, "/", relation.Name, "/")
-			getHandler := makeRelationGetEndpoint(relation)
-
-			getEndpoint := Endpoint{path, "GET"}
-
-			endpoints = append(endpoints, getEndpoint)
-
-			e.GET(path, getHandler)
+	for databaseName, databaseRelations := range relations {
+		for _, relation := range databaseRelations {
+			path := makeGetPath(databaseName, relation.Name)
+			handler := makeGetEndpoint(relation)
+			endpoints = append(endpoints, Endpoint{path, "GET"})
+			e.GET(path, handler)
 		}
 	}
 
@@ -57,10 +55,19 @@ func printEndpoints(endpoints []Endpoint) {
 	}
 }
 
-func makeRelationGetEndpoint(relation db.Relation) func(echo.Context) error {
+func makeGetPath(databaseName string, relationName string) string {
+	return fmt.Sprint("/", databaseName, "/", relationName, "/")
+}
+
+func makeGetEndpoint(relation db.Relation) func(echo.Context) error {
 	handler := func(c echo.Context) error {
 		params := parseGetQueryParams(c)
-		tuples := db.Select(relation, params.Limit, params.Offset)
+		tuples, err := db.Select(relation, params.Limit, params.Offset)
+
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]error{"error": err})
+		}
+
 		response := addMeta(tuples, params.Limit, params.Offset)
 
 		return c.JSON(http.StatusOK, response)
@@ -70,8 +77,6 @@ func makeRelationGetEndpoint(relation db.Relation) func(echo.Context) error {
 }
 
 func parseGetQueryParams(c echo.Context) SelectParams {
-	// Sane defaults
-	// TODO: move to config
 	limit := parseStrParamToInt(c, "limit", 10)
 	offset := parseStrParamToInt(c, "offset", 0)
 

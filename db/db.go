@@ -6,7 +6,6 @@ import (
 	"github.com/jackc/pgx"
 )
 
-// TODO: move all data-related stuff to separate NS
 type tuple []interface{}
 
 type column struct {
@@ -14,7 +13,7 @@ type column struct {
 	Nullable   bool
 }
 
-// Keyvalue - represents {column: value} mapping
+// Keyvalue - represents {column: value} mapping, without strict type-checking
 type Keyvalue map[string]interface{}
 
 // Relation - represents PostgreSQL relation
@@ -66,40 +65,43 @@ func GetRelations(schema string, pool *pgx.ConnPool) ([]Relation, error) {
 }
 
 // Select - selects given relation with limit and offset
-// TODO: refactor this mess
-func Select(relation Relation, limit int, offset int) []Keyvalue {
+func Select(relation Relation, limit int, offset int) ([]Keyvalue, error) {
 	// TODO: this is kinda awful, revisit
 	// TODO: https://github.com/Masterminds/squirrel
 	template := "SELECT * FROM %v LIMIT %d OFFSET %d;"
 	query := fmt.Sprintf(template, relation.Name, limit, offset)
 
-	// TODO: this is also awful, maybe in Go there are ways to represent it better
+	rows, err := relation.Pool.Query(query)
 
-	var tuples []tuple
+	if err != nil {
+		return make([]Keyvalue, 0), err
+	}
 
-	rows, _ := relation.Pool.Query(query)
+	return parseSelectResult(rows)
+}
+
+func parseSelectResult(rows *pgx.Rows) ([]Keyvalue, error) {
+	var rawTuples []tuple
+	var columnValueMap []Keyvalue
 
 	for rows.Next() {
 		vals, _ := rows.Values()
-		tuples = append(tuples, vals)
+		rawTuples = append(rawTuples, vals)
 	}
 
 	fields := rows.FieldDescriptions()
 
-	var keyvals []Keyvalue
-
-	for _, tuple := range tuples {
+	for _, tuple := range rawTuples {
 		kv := make(Keyvalue)
 
-		for i, fd := range fields {
-			kv[fd.Name] = tuple[i]
+		for index, field := range fields {
+			kv[field.Name] = tuple[index]
 		}
 
-		keyvals = append(keyvals, kv)
+		columnValueMap = append(columnValueMap, kv)
 	}
 
-	return keyvals
-
+	return columnValueMap, nil
 }
 
 func getTableColumns(tableName string, pool *pgx.ConnPool) ([]column, error) {
