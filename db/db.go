@@ -13,7 +13,7 @@ type column struct {
 	Nullable   bool
 }
 
-// Keyvalue - represents {column: value} mapping, without strict type-checking
+// Keyvalue - represents {column: value} mapping, without any type-checking
 type Keyvalue map[string]interface{}
 
 // Relation - represents PostgreSQL relation
@@ -64,6 +64,12 @@ func OpenPool(database *Database) error {
 // FetchRelations - sets existing relations for database
 func FetchRelations(database *Database) error {
 	relations := make(map[string][]Relation)
+
+	if database.Schemas == nil {
+		database.Schemas = []string{"public"}
+	}
+
+	fmt.Print(database.Schemas)
 
 	// TODO: rewrite to one query
 	for _, schema := range database.Schemas {

@@ -9,12 +9,6 @@ import (
 	"github.com/labstack/echo"
 )
 
-// Endpoint - Represents API Endpoint
-type Endpoint struct {
-	Path   string
-	Method string
-}
-
 // SelectParams - limit and offset, parsed from QueryParams
 type SelectParams struct {
 	Limit  int
@@ -22,48 +16,29 @@ type SelectParams struct {
 }
 
 // StartWeb - starts HTTP server for given collection of relations
-func StartWeb(databases map[string]*db.Database, port string) {
+func StartWeb(databases map[string]*db.Database, port string) error {
 	e := echo.New()
 
-	endpoints := setupRoutes(databases, e)
+	setupRoutes(databases, e)
 
-	printEndpoints(endpoints)
-
-	e.Start(port)
+	return e.Start(port)
 }
 
-func setupRoutes(databases map[string]*db.Database, e *echo.Echo) []Endpoint {
-	var endpoints []Endpoint
-
+func setupRoutes(databases map[string]*db.Database, e *echo.Echo) {
+	fmt.Printf("Generating endpoints...\n")
 	for name, database := range databases {
-		databaseEndpoints := setupRoutesForDatabase(name, database, e)
-		endpoints = append(endpoints, databaseEndpoints...)
+		setupRoutesForDatabase(name, database, e)
 	}
-
-	return endpoints
 }
 
-func setupRoutesForDatabase(name string, database *db.Database, e *echo.Echo) []Endpoint {
-	var endpoints []Endpoint
-
+func setupRoutesForDatabase(name string, database *db.Database, e *echo.Echo) {
 	for schemaName, relations := range database.Relations {
 		for _, relation := range relations {
 			path := makeGetPath(name, schemaName, relation.Name)
 			handler := makeGetEndpoint(database, schemaName, relation)
-			endpoints = append(endpoints, Endpoint{path, "GET"})
-			fmt.Printf("Generated: %v\n", path)
+			fmt.Printf("GET %v\n", path)
 			e.GET(path, handler)
 		}
-	}
-
-	return endpoints
-}
-
-func printEndpoints(endpoints []Endpoint) {
-	fmt.Println("Generated endpoints:")
-
-	for _, endpoint := range endpoints {
-		fmt.Println(endpoint.Method, endpoint.Path)
 	}
 }
 

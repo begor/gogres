@@ -13,5 +13,6 @@
             "host": "localhost",
             "poolSize": 2
         }
-    }
+    },
+    "port": "5050"
 }

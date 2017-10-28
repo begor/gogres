@@ -13,47 +13,55 @@ import (
 // App - global app configuration
 type App struct {
 	Databases map[string]*db.Database // name => database
+	Port      string
 }
 
 func main() {
 	// TODO: CLI
 	confFile := "./conf.json"
-	application, err := GetApp(confFile)
+	application, err := configure(confFile)
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to parse conf file %v, error: %v\n", confFile, err)
 		os.Exit(1)
 	}
 
-	err = OpenConnPools(application)
+	err = openPools(application)
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to establish connection: %v\n", err)
 		os.Exit(1)
 	}
 
-	StartAPI(application)
-}
-
-// GetApp - returns App configuration
-func GetApp(filepath string) (App, error) {
-	dat, err := ioutil.ReadFile(filepath)
+	err = fetchRelations(application)
 
 	if err != nil {
-		return App{}, err
+		fmt.Fprintf(os.Stderr, "Unable to fetch relations: %v\n", err)
+		os.Exit(1)
 	}
 
+	err = startAPI(application)
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to start API: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func configure(filepath string) (App, error) {
 	app := App{}
+	data, err := ioutil.ReadFile(filepath)
 
-	json.Unmarshal(dat, &app)
+	if err != nil {
+		return app, err
+	}
 
-	printDatabases(app)
+	json.Unmarshal(data, &app)
 
 	return app, nil
 }
 
-// OpenConnPools - opens connection pools for given settings
-func OpenConnPools(app App) error {
+func openPools(app App) error {
 	for _, database := range app.Databases {
 		err := db.OpenPool(database)
 
@@ -65,19 +73,7 @@ func OpenConnPools(app App) error {
 	return nil
 }
 
-// StartAPI - starts REST API endpoints for a given app instance
-func StartAPI(app App) {
-	err := getRelations(app)
-
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to fetch relations: %v\n", err)
-		os.Exit(1)
-	}
-
-	web.StartWeb(app.Databases, ":5050")
-}
-
-func getRelations(app App) error {
+func fetchRelations(app App) error {
 	for _, database := range app.Databases {
 		err := db.FetchRelations(database)
 
@@ -89,10 +85,6 @@ func getRelations(app App) error {
 	return nil
 }
 
-func printDatabases(app App) {
-	fmt.Println("Parsed config:")
-	for name, databases := range app.Databases {
-		fmt.Println(name)
-		fmt.Println(databases)
-	}
+func startAPI(app App) error {
+	return web.StartWeb(app.Databases, ":5050")
 }
