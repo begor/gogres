@@ -26,6 +26,11 @@ func StartWeb(databases map[string]*db.Database, port string) error {
 
 func setupRoutes(databases map[string]*db.Database, e *echo.Echo) {
 	fmt.Printf("Generating endpoints...\n")
+
+	setupInfoRoute(e)
+
+	fmt.Print("GET /api/\n")
+
 	for name, database := range databases {
 		setupRoutesForDatabase(name, database, e)
 	}
@@ -42,25 +47,46 @@ func setupRoutesForDatabase(name string, database *db.Database, e *echo.Echo) {
 	}
 }
 
+func setupInfoRoute(e *echo.Echo) {
+	e.GET("/api/", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, e.Routes())
+	})
+}
+
 func makeGetPath(prefix string, schemaName string, relationName string) string {
-	return fmt.Sprint("/", prefix, "/", schemaName, "/", relationName, "/")
+	return fmt.Sprint("/api/", prefix, "/", schemaName, "/", relationName, "/")
 }
 
 func makeGetEndpoint(database *db.Database, schema string, relation db.Relation) func(echo.Context) error {
 	handler := func(c echo.Context) error {
 		params := parseGetQueryParams(c)
-		tuples, err := db.Select(database, schema, relation, params.Limit, params.Offset)
+		tuples, err := database.Select(schema, relation, params.Limit, params.Offset)
 
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, map[string]error{"error": err})
+			return c.JSON(http.StatusBadRequest, generateErrorResp(err))
 		}
 
-		response := addMeta(tuples, params.Limit, params.Offset)
-
-		return c.JSON(http.StatusOK, response)
+		return c.JSON(http.StatusOK, generateOkResp(params, tuples))
 	}
 
 	return handler
+}
+
+func generateErrorResp(err error) map[string]error {
+	return map[string]error{"error": err}
+}
+
+func generateOkResp(params SelectParams, tuples []db.Keyvalue) db.Keyvalue {
+	response := make(db.Keyvalue)
+	meta := make(db.Keyvalue)
+
+	meta["limit"] = params.Limit
+	meta["offset"] = params.Offset
+
+	response["meta"] = meta
+	response["tuples"] = tuples
+
+	return response
 }
 
 func parseGetQueryParams(c echo.Context) SelectParams {
@@ -81,17 +107,4 @@ func parseStrParamToInt(c echo.Context, param string, deflt int) int {
 	}
 
 	return result
-}
-
-func addMeta(tuples []db.Keyvalue, limit int, offset int) db.Keyvalue {
-	response := make(db.Keyvalue)
-	meta := make(db.Keyvalue)
-
-	meta["limit"] = limit
-	meta["offset"] = offset
-
-	response["meta"] = meta
-	response["tuples"] = tuples
-
-	return response
 }

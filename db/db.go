@@ -34,58 +34,27 @@ type Database struct {
 	Pool      *pgx.ConnPool
 }
 
-func openPool(database *Database) error {
-
-	config := pgx.ConnConfig{
-		Host:     database.Host,
-		Port:     database.Port,
-		User:     database.User,
-		Database: database.Database,
-		Password: database.Password,
-	}
-
-	poolConfig := pgx.ConnPoolConfig{
-		ConnConfig:     config,
-		MaxConnections: database.PoolSize,
-	}
-
-	pool, err := pgx.NewConnPool(poolConfig)
-
-	if err != nil {
-		return err
-	}
-
-	database.Pool = pool
-
-	return nil
-}
-
 // FetchRelations - sets existing relations for database
-func FetchRelations(database *Database) error {
-	err := openPool(database)
+func (d *Database) FetchRelations() error {
+	d.checkSchemas()
 
+	err := d.openPool()
 	if err != nil {
 		return err
 	}
 
-	relations := make(map[string][]Relation)
-
-	if database.Schemas == nil {
-		database.Schemas = []string{"public"}
-	}
-
-	fmt.Print(database.Schemas)
+	relations := make(SchemaRelations)
 
 	// TODO: rewrite to one query
-	for _, schema := range database.Schemas {
-		tableNames, err := getTableNames(schema, database.Pool)
+	for _, schema := range d.Schemas {
+		tableNames, err := getTableNames(schema, d.Pool)
 
 		if err != nil {
 			return err
 		}
 
 		for _, name := range tableNames {
-			cols, err := getTableColumns(name, database.Pool)
+			cols, err := getTableColumns(name, d.Pool)
 
 			if err != nil {
 				return err
@@ -95,25 +64,60 @@ func FetchRelations(database *Database) error {
 		}
 	}
 
-	database.Relations = relations
+	d.Relations = relations
 
 	return nil
 }
 
 // Select - selects given relation with limit and offset
-func Select(database *Database, schema string, relation Relation, limit int, offset int) ([]Keyvalue, error) {
+func (d *Database) Select(schema string, relation Relation, limit int, offset int) ([]Keyvalue, error) {
 	// TODO: this is kinda awful, revisit
 	// TODO: https://github.com/Masterminds/squirrel
 	template := "SELECT * FROM %v.%v LIMIT %d OFFSET %d;"
 	query := fmt.Sprintf(template, schema, relation.Name, limit, offset)
 
-	rows, err := database.Pool.Query(query)
+	rows, err := d.Pool.Query(query)
 
 	if err != nil {
 		return make([]Keyvalue, 0), err
 	}
 
 	return parseSelectResult(rows)
+}
+
+func (d *Database) openPool() error {
+	poolConfig := pgx.ConnPoolConfig{
+		ConnConfig:     d.buildConnConfig(),
+		MaxConnections: d.PoolSize,
+	}
+
+	pool, err := pgx.NewConnPool(poolConfig)
+
+	if err != nil {
+		return err
+	}
+
+	d.Pool = pool
+
+	return nil
+}
+
+func (d *Database) checkSchemas() {
+	var defaultSchema = []string{"public"}
+
+	if d.Schemas == nil {
+		d.Schemas = defaultSchema
+	}
+}
+
+func (d *Database) buildConnConfig() pgx.ConnConfig {
+	return pgx.ConnConfig{
+		Host:     d.Host,
+		Port:     d.Port,
+		User:     d.User,
+		Database: d.Database,
+		Password: d.Password,
+	}
 }
 
 func parseSelectResult(rows *pgx.Rows) ([]Keyvalue, error) {

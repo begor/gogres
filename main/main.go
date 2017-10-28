@@ -56,7 +56,7 @@ func configure(filepath string) (App, error) {
 
 func fetchRelations(app App) error {
 	for _, database := range app.Databases {
-		err := db.FetchRelations(database)
+		err := database.FetchRelations()
 
 		if err != nil {
 			return err
