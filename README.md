@@ -12,6 +12,7 @@ Features:
 - Multiple database support
 - Specified schemas (default - `public` schema)
 - Configurable size of connection pools
+- `LIMIT` and `OFFSET` as query params for every generated endpoint
 
 ## Installation
 
