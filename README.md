@@ -49,4 +49,4 @@ For `second` it'll use default schema (namely, `public`).
 
 `gogres` also supports different pool settings for each database in a config. Here, `first` will be server via pool of 5 connections, and `second` of 10 connections.
 
-As a result, API will be available at `localhost:5050`.
+As a result, API will be available at `localhost:5050`. You can visit `localhost:5050/api/` to see a list of generated endpoints.
