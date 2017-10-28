@@ -42,8 +42,11 @@ Sample configuration file looks like this:
 ```
 
 It states that `gogres` should generate API for two databases: `first` on `localhost` and `second` on `some.host`. 
+
 For `first` it'll reflect two schemas: `public` and `private` and put them into `/api/first/public/` and `/api/first/private` API namespaces.
+
 For `second` it'll use default schema (namely, `public`).
+
 `gogres` also supports different pool settings for each database in a config. Here, `first` will be server via pool of 5 connections, and `second` of 10 connections.
 
 As a result, API will be available at `localhost:5050`.
