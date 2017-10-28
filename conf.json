@@ -1,21 +1,17 @@
 {
-    "connections": [
-        {
-            "first": {
-                "database": "begor",
-                "user": "begor", 
-                "host": "localhost",
-                "schemas": ["public", "private"], 
-                "poolSize": 5
-            }
+    "databases": {
+        "first": {
+            "database": "begor",
+            "user": "begor", 
+            "host": "localhost",
+            "schemas": ["public", "private"], 
+            "poolSize": 5
         },
-        {
-            "second": {
-                "database": "second", 
-                "user": "begor", 
-                "host": "localhost",
-                "poolSize": 2
-            }
+        "second": {
+            "database": "second", 
+            "user": "begor", 
+            "host": "localhost",
+            "poolSize": 2
         }
-    ]
+    }
 }

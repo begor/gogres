@@ -35,7 +35,7 @@ type Database struct {
 }
 
 // OpenPool - opens connections pool to PostgreSQL instance
-func OpenPool(database Database) error {
+func OpenPool(database *Database) error {
 
 	config := pgx.ConnConfig{
 		Host:     database.Host,
@@ -62,8 +62,8 @@ func OpenPool(database Database) error {
 }
 
 // FetchRelations - sets existing relations for database
-func FetchRelations(database Database) error {
-	var relations SchemaRelations
+func FetchRelations(database *Database) error {
+	relations := make(map[string][]Relation)
 
 	// TODO: rewrite to one query
 	for _, schema := range database.Schemas {
@@ -90,13 +90,13 @@ func FetchRelations(database Database) error {
 }
 
 // Select - selects given relation with limit and offset
-func Select(pool *pgx.ConnPool, relation Relation, limit int, offset int) ([]Keyvalue, error) {
+func Select(database *Database, schema string, relation Relation, limit int, offset int) ([]Keyvalue, error) {
 	// TODO: this is kinda awful, revisit
 	// TODO: https://github.com/Masterminds/squirrel
-	template := "SELECT * FROM %v LIMIT %d OFFSET %d;"
-	query := fmt.Sprintf(template, relation.Name, limit, offset)
+	template := "SELECT * FROM %v.%v LIMIT %d OFFSET %d;"
+	query := fmt.Sprintf(template, schema, relation.Name, limit, offset)
 
-	rows, err := pool.Query(query)
+	rows, err := database.Pool.Query(query)
 
 	if err != nil {
 		return make([]Keyvalue, 0), err

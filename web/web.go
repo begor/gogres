@@ -22,7 +22,7 @@ type SelectParams struct {
 }
 
 // StartWeb - starts HTTP server for given collection of relations
-func StartWeb(databases map[string]db.Database, port string) {
+func StartWeb(databases map[string]*db.Database, port string) {
 	e := echo.New()
 
 	endpoints := setupRoutes(databases, e)
@@ -32,7 +32,7 @@ func StartWeb(databases map[string]db.Database, port string) {
 	e.Start(port)
 }
 
-func setupRoutes(databases map[string]db.Database, e *echo.Echo) []Endpoint {
+func setupRoutes(databases map[string]*db.Database, e *echo.Echo) []Endpoint {
 	var endpoints []Endpoint
 
 	for name, database := range databases {
@@ -43,13 +43,13 @@ func setupRoutes(databases map[string]db.Database, e *echo.Echo) []Endpoint {
 	return endpoints
 }
 
-func setupRoutesForDatabase(name string, database db.Database, e *echo.Echo) []Endpoint {
+func setupRoutesForDatabase(name string, database *db.Database, e *echo.Echo) []Endpoint {
 	var endpoints []Endpoint
 
 	for schemaName, relations := range database.Relations {
 		for _, relation := range relations {
 			path := makeGetPath(name, schemaName, relation.Name)
-			handler := makeGetEndpoint(database, relation)
+			handler := makeGetEndpoint(database, schemaName, relation)
 			endpoints = append(endpoints, Endpoint{path, "GET"})
 			fmt.Printf("Generated: %v\n", path)
 			e.GET(path, handler)
@@ -71,10 +71,10 @@ func makeGetPath(prefix string, schemaName string, relationName string) string {
 	return fmt.Sprint("/", prefix, "/", schemaName, "/", relationName, "/")
 }
 
-func makeGetEndpoint(database db.Database, relation db.Relation) func(echo.Context) error {
+func makeGetEndpoint(database *db.Database, schema string, relation db.Relation) func(echo.Context) error {
 	handler := func(c echo.Context) error {
 		params := parseGetQueryParams(c)
-		tuples, err := db.Select(database.Pool, relation, params.Limit, params.Offset)
+		tuples, err := db.Select(database, schema, relation, params.Limit, params.Offset)
 
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]error{"error": err})

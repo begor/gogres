@@ -12,7 +12,7 @@ import (
 
 // App - global app configuration
 type App struct {
-	Databases map[string]db.Database // name => database
+	Databases map[string]*db.Database // name => database
 }
 
 func main() {
@@ -46,6 +46,8 @@ func GetApp(filepath string) (App, error) {
 	app := App{}
 
 	json.Unmarshal(dat, &app)
+
+	printDatabases(app)
 
 	return app, nil
 }
@@ -85,4 +87,12 @@ func getRelations(app App) error {
 	}
 
 	return nil
+}
+
+func printDatabases(app App) {
+	fmt.Println("Parsed config:")
+	for name, databases := range app.Databases {
+		fmt.Println(name)
+		fmt.Println(databases)
+	}
 }
