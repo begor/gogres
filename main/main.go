@@ -8,24 +8,15 @@ import (
 
 	"github.com/begor/gogres/db"
 	"github.com/begor/gogres/web"
-	"github.com/jackc/pgx"
 )
-
-// Database - represents single connection to PostgreSQL database/schema
-type Database struct {
-	Config    pgx.ConnConfig
-	Schema    string
-	PoolSize  int
-	Pool      *pgx.ConnPool
-	Relations []db.Relation
-}
 
 // App - global app configuration
 type App struct {
-	Databases map[string]*Database // name => *connection
+	Databases map[string]db.Database // name => database
 }
 
 func main() {
+	// TODO: CLI
 	confFile := "./conf.json"
 	application, err := GetApp(confFile)
 
@@ -33,8 +24,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Unable to parse conf file %v, error: %v\n", confFile, err)
 		os.Exit(1)
 	}
-
-	printConnections(application)
 
 	err = OpenConnPools(application)
 
@@ -63,14 +52,12 @@ func GetApp(filepath string) (App, error) {
 
 // OpenConnPools - opens connection pools for given settings
 func OpenConnPools(app App) error {
-	for _, conn := range app.Databases {
-		pool, err := db.OpenPool(conn.Config, conn.PoolSize)
+	for _, database := range app.Databases {
+		err := db.OpenPool(database)
 
 		if err != nil {
 			return err
 		}
-
-		conn.Pool = pool
 	}
 
 	return nil
@@ -78,47 +65,24 @@ func OpenConnPools(app App) error {
 
 // StartAPI - starts REST API endpoints for a given app instance
 func StartAPI(app App) {
-	relations, err := getRelations(app)
+	err := getRelations(app)
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to fetch relations: %v\n", err)
 		os.Exit(1)
 	}
 
-	web.StartWeb(relations, ":5050")
+	web.StartWeb(app.Databases, ":5050")
 }
 
-func getRelations(app App) (map[string][]db.Relation, error) {
-	relations := make(map[string][]db.Relation)
-
-	for name, database := range app.Databases {
-		dbRelations, err := db.GetRelations(database.Schema, database.Pool)
-
-		printRelations(name, dbRelations)
+func getRelations(app App) error {
+	for _, database := range app.Databases {
+		err := db.FetchRelations(database)
 
 		if err != nil {
-			return relations, err
+			return err
 		}
-
-		relations[name] = dbRelations
 	}
 
-	return relations, nil
-}
-
-func printRelations(name string, relations []db.Relation) {
-	fmt.Printf("Reflected %v relations:\n", name)
-	for _, rel := range relations {
-		fmt.Printf("\t- %v\n", rel.Name)
-	}
-	fmt.Println()
-}
-
-func printConnections(app App) {
-	fmt.Println("Opened connections: ")
-	fmt.Println("(name: database-schema-pool size): ")
-	for name, database := range app.Databases {
-		fmt.Printf("%v: %v-%v-%v\n", name, database.Config.Database, database.Schema, database.PoolSize)
-	}
-	fmt.Println()
+	return nil
 }

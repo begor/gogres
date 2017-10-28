@@ -22,24 +22,36 @@ type SelectParams struct {
 }
 
 // StartWeb - starts HTTP server for given collection of relations
-func StartWeb(relations map[string][]db.Relation, port string) {
+func StartWeb(databases map[string]db.Database, port string) {
 	e := echo.New()
 
-	endpoints := setupRoutes(relations, e)
+	endpoints := setupRoutes(databases, e)
 
 	printEndpoints(endpoints)
 
 	e.Start(port)
 }
 
-func setupRoutes(relations map[string][]db.Relation, e *echo.Echo) []Endpoint {
+func setupRoutes(databases map[string]db.Database, e *echo.Echo) []Endpoint {
 	var endpoints []Endpoint
 
-	for databaseName, databaseRelations := range relations {
-		for _, relation := range databaseRelations {
-			path := makeGetPath(databaseName, relation.Name)
-			handler := makeGetEndpoint(relation)
+	for name, database := range databases {
+		databaseEndpoints := setupRoutesForDatabase(name, database, e)
+		endpoints = append(endpoints, databaseEndpoints...)
+	}
+
+	return endpoints
+}
+
+func setupRoutesForDatabase(name string, database db.Database, e *echo.Echo) []Endpoint {
+	var endpoints []Endpoint
+
+	for schemaName, relations := range database.Relations {
+		for _, relation := range relations {
+			path := makeGetPath(name, schemaName, relation.Name)
+			handler := makeGetEndpoint(database, relation)
 			endpoints = append(endpoints, Endpoint{path, "GET"})
+			fmt.Printf("Generated: %v\n", path)
 			e.GET(path, handler)
 		}
 	}
@@ -55,14 +67,14 @@ func printEndpoints(endpoints []Endpoint) {
 	}
 }
 
-func makeGetPath(databaseName string, relationName string) string {
-	return fmt.Sprint("/", databaseName, "/", relationName, "/")
+func makeGetPath(prefix string, schemaName string, relationName string) string {
+	return fmt.Sprint("/", prefix, "/", schemaName, "/", relationName, "/")
 }
 
-func makeGetEndpoint(relation db.Relation) func(echo.Context) error {
+func makeGetEndpoint(database db.Database, relation db.Relation) func(echo.Context) error {
 	handler := func(c echo.Context) error {
 		params := parseGetQueryParams(c)
-		tuples, err := db.Select(relation, params.Limit, params.Offset)
+		tuples, err := db.Select(database.Pool, relation, params.Limit, params.Offset)
 
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]error{"error": err})
