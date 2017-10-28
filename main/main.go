@@ -26,13 +26,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = openPools(application)
-
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to establish connection: %v\n", err)
-		os.Exit(1)
-	}
-
 	err = fetchRelations(application)
 
 	if err != nil {
@@ -61,18 +54,6 @@ func configure(filepath string) (App, error) {
 	return app, nil
 }
 
-func openPools(app App) error {
-	for _, database := range app.Databases {
-		err := db.OpenPool(database)
-
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func fetchRelations(app App) error {
 	for _, database := range app.Databases {
 		err := db.FetchRelations(database)
@@ -86,5 +67,5 @@ func fetchRelations(app App) error {
 }
 
 func startAPI(app App) error {
-	return web.StartWeb(app.Databases, ":5050")
+	return web.StartWeb(app.Databases, app.Port)
 }

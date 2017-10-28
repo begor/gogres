@@ -34,8 +34,7 @@ type Database struct {
 	Pool      *pgx.ConnPool
 }
 
-// OpenPool - opens connections pool to PostgreSQL instance
-func OpenPool(database *Database) error {
+func openPool(database *Database) error {
 
 	config := pgx.ConnConfig{
 		Host:     database.Host,
@@ -63,6 +62,12 @@ func OpenPool(database *Database) error {
 
 // FetchRelations - sets existing relations for database
 func FetchRelations(database *Database) error {
+	err := openPool(database)
+
+	if err != nil {
+		return err
+	}
+
 	relations := make(map[string][]Relation)
 
 	if database.Schemas == nil {
