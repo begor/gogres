@@ -1,5 +1,7 @@
 # gogres
+
 [![Build Status](https://travis-ci.org/begor/gogres.svg?branch=master)](https://travis-ci.org/begor/gogres)
+
 **gogres** - REST API generator for PostgreSQL databases.
 
 ## Overview
