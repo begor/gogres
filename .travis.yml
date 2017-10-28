@@ -3,4 +3,4 @@ language: go
 go:
   - 1.9.x
 
-script: go build main/main.go
+script: go build -o .build main/main.go
