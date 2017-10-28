@@ -11,7 +11,14 @@
             "database": "second", 
             "user": "begor", 
             "host": "localhost",
-            "poolSize": 2
+            "poolSize": 5
+        },
+        "bookings": {
+            "database": "demo", 
+            "user": "begor", 
+            "host": "localhost",
+            "schemas": ["bookings"],
+            "poolSize": 10
         }
     },
     "port": ":5050"
