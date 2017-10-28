@@ -13,71 +13,111 @@ type column struct {
 	Nullable   bool
 }
 
-// Keyvalue - represents {column: value} mapping, without strict type-checking
+// Keyvalue - represents {column: value} mapping, without any type-checking
 type Keyvalue map[string]interface{}
 
 // Relation - represents PostgreSQL relation
 type Relation struct {
 	Name       string
 	Attributes []column
-	Pool       *pgx.ConnPool
 }
 
-// Connect - opens connection to PostgreSQL instance
-func OpenPool(config pgx.ConnConfig, size int) (*pgx.ConnPool, error) {
+// SchemaRelations - mapping from schema name to its relations
+type SchemaRelations map[string][]Relation
 
-	poolConfig := pgx.ConnPoolConfig{
-		ConnConfig:     config,
-		MaxConnections: size,
-	}
+// Database - represents Schema with Schemas
+type Database struct {
+	pgx.ConnConfig
+	Schemas   []string
+	Relations SchemaRelations
+	PoolSize  int
+	Pool      *pgx.ConnPool
+}
 
-	pool, err := pgx.NewConnPool(poolConfig)
+// FetchRelations - sets existing relations for database
+func (d *Database) FetchRelations() error {
+	d.checkSchemas()
 
+	err := d.openPool()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return pool, nil
-}
-
-// GetRelations returns existing relations for schema
-func GetRelations(schema string, pool *pgx.ConnPool) ([]Relation, error) {
-	var relations []Relation
+	relations := make(SchemaRelations)
 
 	// TODO: rewrite to one query
-	tableNames, err := getTableNames(schema, pool)
-
-	if err != nil {
-		return nil, err
-	}
-
-	for _, name := range tableNames {
-		cols, err := getTableColumns(name, pool)
+	for _, schema := range d.Schemas {
+		tableNames, err := getTableNames(schema, d.Pool)
 
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		relations = append(relations, Relation{name, cols, pool})
+		for _, name := range tableNames {
+			cols, err := getTableColumns(name, d.Pool)
+
+			if err != nil {
+				return err
+			}
+
+			relations[schema] = append(relations[schema], Relation{name, cols})
+		}
 	}
 
-	return relations, nil
+	d.Relations = relations
+
+	return nil
 }
 
 // Select - selects given relation with limit and offset
-func Select(relation Relation, limit int, offset int) ([]Keyvalue, error) {
+func (d *Database) Select(schema string, relation Relation, limit int, offset int) ([]Keyvalue, error) {
 	// TODO: this is kinda awful, revisit
 	// TODO: https://github.com/Masterminds/squirrel
-	template := "SELECT * FROM %v LIMIT %d OFFSET %d;"
-	query := fmt.Sprintf(template, relation.Name, limit, offset)
+	template := "SELECT * FROM %v.%v LIMIT %d OFFSET %d;"
+	query := fmt.Sprintf(template, schema, relation.Name, limit, offset)
 
-	rows, err := relation.Pool.Query(query)
+	rows, err := d.Pool.Query(query)
 
 	if err != nil {
 		return make([]Keyvalue, 0), err
 	}
 
 	return parseSelectResult(rows)
+}
+
+func (d *Database) openPool() error {
+	poolConfig := pgx.ConnPoolConfig{
+		ConnConfig:     d.buildConnConfig(),
+		MaxConnections: d.PoolSize,
+	}
+
+	pool, err := pgx.NewConnPool(poolConfig)
+
+	if err != nil {
+		return err
+	}
+
+	d.Pool = pool
+
+	return nil
+}
+
+func (d *Database) checkSchemas() {
+	var defaultSchema = []string{"public"}
+
+	if d.Schemas == nil {
+		d.Schemas = defaultSchema
+	}
+}
+
+func (d *Database) buildConnConfig() pgx.ConnConfig {
+	return pgx.ConnConfig{
+		Host:     d.Host,
+		Port:     d.Port,
+		User:     d.User,
+		Database: d.Database,
+		Password: d.Password,
+	}
 }
 
 func parseSelectResult(rows *pgx.Rows) ([]Keyvalue, error) {

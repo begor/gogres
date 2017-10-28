@@ -1,22 +1,25 @@
 {
     "databases": {
-        "first" : {
-            "config": {
-                "database": "begor",
-                "user": "begor", 
-                "host": "localhost"
-            },
-            "schema": "public", 
+        "first": {
+            "database": "begor",
+            "user": "begor", 
+            "host": "localhost",
+            "schemas": ["public", "private"], 
             "poolSize": 5
         },
         "second": {
-            "config": {
-                "database": "second", 
-                "user": "begor", 
-                "host": "localhost"
-            },
-            "schema": "public", 
-            "poolSize": 2
+            "database": "second", 
+            "user": "begor", 
+            "host": "localhost",
+            "poolSize": 5
+        },
+        "bookings": {
+            "database": "demo", 
+            "user": "begor", 
+            "host": "localhost",
+            "schemas": ["bookings"],
+            "poolSize": 10
         }
-    }
+    },
+    "port": ":5050"
 }
